@@ -1,11 +1,11 @@
 const express = require('express');
 
-const db = require('../data/db-config.js');
-
 const router = express.Router();
 
+const Users = require('./user-model.js')
+
 router.get('/', (req, res) => {
-  db('users')
+  Users.find('users')
   .then(users => {
     res.json(users);
   })
@@ -14,49 +14,42 @@ router.get('/', (req, res) => {
   });
 });
 
-router.get('/:id', (req, res) => {
-  const { id } = req.params;
-
-  db('users').where({ id })
-  .then(users => {
-    const user = users[0];
-
-    if (user) {
-      res.json(user);
-    } else {
-      res.status(404).json({ message: 'Could not find user with given id.' })
+router.get(`/:id`, (req, res) => {
+  const id = req.params.id
+  Users.findById(id)
+  .then(user => {
+    {user 
+      ? res.status(200).json(user) 
+      : res.status(404).json({error: "The users information could not be retrieved."}) 
     }
   })
-  .catch(err => {
-    res.status(500).json({ message: 'Failed to get user' });
-  });
-});
+})
 
 router.post('/', (req, res) => {
-  const userData = req.body;
-
-  db('users').insert(userData)
-  .then(ids => {
-    res.status(201).json({ created: ids[0] });
-  })
-  .catch(err => {
-    res.status(500).json({ message: 'Failed to create new user' });
-  });
-});
+  const user = req.body;
+  {!user
+    ? res.status(400).json({ errorMessage: "user info"}) 
+    : Users.insert(user)
+      .then((user) => {
+        res.status(201).json(user)
+      })
+  }
+})
 
 router.put('/:id', (req, res) => {
   const { id } = req.params;
   const changes = req.body;
 
-  db('users').where({ id }).update(changes)
-  .then(count => {
-    if (count) {
-      res.json({ update: count });
+  Users.update(id, changes)
+  .then(updated => {
+    if (updated) {
+      res.json({ data: updated });
     } else {
-      res.status(404).json({ message: 'Could not find user with given id' });
+      res.status(404).json({ message: 'could not update' });
     }
   })
-  .catch(err => {
+  .catch(error => {
+    console.log(error)
     res.status(500).json({ message: 'Failed to update user' });
   });
 });
@@ -64,7 +57,7 @@ router.put('/:id', (req, res) => {
 router.delete('/:id', (req, res) => {
   const { id } = req.params;
 
-  db('users').where({ id }).del()
+  Users('users').where({ id }).del()
   .then(count => {
     if (count) {
       res.json({ removed: count });
